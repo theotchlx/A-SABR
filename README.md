@@ -106,40 +106,40 @@ Example of a ```NewManager``` implementation :
 
 ```rust
 impl  ContactManager  for  NewManager {
-	fn  dry_run(
-		&self,
-		contact_data: &ContactInfo,
-		at_time: Date,
-		bundle: &Bundle,
-		) -> Option<TxEndHopData> {
-			// Simulate here the transmission and return a TxEndHopData
-			// if transmission is possible
-	}
+  fn  dry_run(
+    &self,
+    contact_data: &ContactInfo,
+    at_time: Date,
+    bundle: &Bundle,
+    ) -> Option<TxEndHopData> {
+      // Simulate here the transmission and return a TxEndHopData
+      // if transmission is possible
+  }
 
-	fn  schedule(
-		&mut  self,
-		contact_data: &ContactInfo,
-		at_time: Date,
-		bundle: &Bundle,
-		) -> Option<TxEndHopData> {
-			// Apply here the transmission and return a TxEndHopData
-			// after you modified the resources of this contact
-			// The TxEndHopData MUST match the one that would be returned by
-			// the dry run for the same inputs
-			// Do not use this function if you didn't do a dry run just before
-			// its call, with the same inputs
-	}
+  fn  schedule(
+    &mut  self,
+    contact_data: &ContactInfo,
+    at_time: Date,
+    bundle: &Bundle,
+    ) -> Option<TxEndHopData> {
+      // Apply here the transmission and return a TxEndHopData
+      // after you modified the resources of this contact
+      // The TxEndHopData MUST match the one that would be returned by
+      // the dry run for the same inputs
+      // Do not use this function if you didn't do a dry run just before
+      // its call, with the same inputs
+  }
 
-	fn  try_init(&mut  self, contact_data: &ContactInfo) -> bool {
-		// finalize the initialisation and sanity check with the
-		// contact's information
-	}
+  fn  try_init(&mut  self, contact_data: &ContactInfo) -> bool {
+    // finalize the initialisation and sanity check with the
+    // contact's information
+  }
 
-	#[cfg(feature = "first_depleted")]
-	fn  get_original_volume(&self) -> Volume {
-		// Implement this method if you intend to use the first_depleted
-		// pathfinding algorithm
-	}
+  #[cfg(feature = "first_depleted")]
+  fn  get_original_volume(&self) -> Volume {
+    // Implement this method if you intend to use the first_depleted
+    // pathfinding algorithm
+  }
 }
 ```
 
@@ -149,20 +149,20 @@ This exchangeable part might need specific configuration for its initialization.
 
 ```rust
 impl  Parser<NewManager> for  NewManager {
-	fn  parse(lexer: &mut  dyn  crate::parsing::Lexer) -> ParsingState<NewManager> {
-		// Logic example if the manager only cares of the contact propagation delay
-		// It is inialized with a delay value
-		match  Duration::parse(lexer) {
-			ParsingState::Finished(delay) => return  ParsingState::Finished(NewManager::new(delay)),
-			ParsingState::Error(msg) => return  ParsingState::Error(msg),
-			ParsingState::EOF => {
-				return  crate::parsing::ParsingState::Error(format!(
-					"Unexpected EOF ({})",
-					lexer.get_current_position()
-				))
-			}
-		}
-	}
+  fn  parse(lexer: &mut  dyn  crate::parsing::Lexer) -> ParsingState<NewManager> {
+    // Logic example if the manager only cares of the contact propagation delay
+    // It is inialized with a delay value
+    match  Duration::parse(lexer) {
+      ParsingState::Finished(delay) => return  ParsingState::Finished(NewManager::new(delay)),
+      ParsingState::Error(msg) => return  ParsingState::Error(msg),
+      ParsingState::EOF => {
+        return  crate::parsing::ParsingState::Error(format!(
+          "Unexpected EOF ({})",
+          lexer.get_current_position()
+        ))
+      }
+    }
+  }
 }
 ```
 
@@ -176,9 +176,9 @@ The ```FileLexer``` forces you to declare the node names, and will work with the
 
 ```rust
 if  let  Ok(mut  mylexer) = FileLexer::new("/path/to/contact_plan_file.txt") {
-	let  mut  cp = ContactPlan::new();
-	let  res = cp.parse::<NoManagement, Box<NewManager>, SABR>(&mut  mylexer, None, None);
-	// The type of res is : Result<(Vec<Node<NoManagement>, Vec<Contact<Box<NewManager>>>)>
+  let  mut  cp = ContactPlan::new();
+  let  res = cp.parse::<NoManagement, Box<NewManager>, SABR>(&mut  mylexer, None, None);
+  // The type of res is : Result<(Vec<Node<NoManagement>, Vec<Contact<Box<NewManager>>>)>
 }
 
 ```
@@ -209,9 +209,9 @@ cm_map.add("new", coerce_cm::<NewManager>);
 cm_map.add("seg", coerce_cm::<SegmentationManager>);
 
 if  let  Ok(mut  mylexer) = FileLexer::new("/path/to/contact_plan_file.txt") {
-	let  mut  cp = ContactPlan::new();
-	let  res = cp.parse::<NoManagement, Box<dyn  ContactManager>, SABR>(&mut  mylexer, None, Some(cm_map));
-	// The type of res is : Result<(Vec<Node<NoManagement>, Vec<Contact<Box<dyn ContactManager>>>)>
+  let  mut  cp = ContactPlan::new();
+  let  res = cp.parse::<NoManagement, Box<dyn  ContactManager>, SABR>(&mut  mylexer, None, Some(cm_map));
+  // The type of res is : Result<(Vec<Node<NoManagement>, Vec<Contact<Box<dyn ContactManager>>>)>
 }
 ```
 
