@@ -5,18 +5,43 @@ use crate::{contact_manager::ContactManager, node_manager::NodeManager};
 pub type ContactDispatcher = fn(&mut dyn Lexer) -> ParsingState<Box<dyn ContactManager>>;
 pub type NodeDispatcher = fn(&mut dyn Lexer) -> ParsingState<Box<dyn NodeManager>>;
 
+/// Wrapper object to a marker -> coercion function map for contacts or nodes versions (T)
+///
+/// # Type Parameters
+///
+/// * `T`: The function type of the values being stored, use ContactDispatcher or NodeDispatcher.
 pub struct Dispatcher<'a, T> {
+    /// A hashmap that stores the coercion functions with their associated markers.
     map: HashMap<&'a str, T>,
 }
 impl<'a, T> Dispatcher<'a, T> {
+    /// Creates a new, empty `Dispatcher`.
     pub fn new() -> Self {
         Self {
             map: HashMap::new(),
         }
     }
+
+    /// Adds a new entry to the dispatcher.
+    ///
+    /// # Arguments
+    ///
+    /// * `marker` - A string slice that acts as the unique key for `coerce_fn`.
+    /// * `coerce_fn` - The function of type `T` to associate with `marker`.
     pub fn add(&mut self, marker: &'a str, coerce_fn: T) {
         self.map.insert(marker, coerce_fn);
     }
+
+    /// Retrieves the coercion function associated with the given `marker`, if it exists.
+    ///
+    /// # Arguments
+    ///
+    /// * `marker` - A string slice representing the key for the desired value.
+    ///
+    /// # Returns
+    ///
+    /// An `Option` containing a reference to the value of type `T` if it exists, or `None` if
+    /// the `marker` is not found.
     pub fn get(&self, marker: &'a str) -> Option<&T> {
         return self.map.get(marker);
     }

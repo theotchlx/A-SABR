@@ -204,13 +204,13 @@ contact 2 3 50 70 3
 If having contacts of different types in the same contact plan is desired to optimize the performance on a single contact basis, the contact plan requires a marker to dispatch to the correct parser :
 
 ```rust
-let  mut  cm_map: HashMap<&str, ContactDispatcher> = HashMap::new();
-cm_map.insert("new", coerce_cm::<NewManager>);
-cm_map.insert("seg", coerce_cm::<SegmentationManager>);
+let  mut  cm_map: Dispatcher<ContactDispatcher> = Dispatcher::<ContactDispatcher>::new();
+cm_map.add("new", coerce_cm::<NewManager>);
+cm_map.add("seg", coerce_cm::<SegmentationManager>);
 
 if  let  Ok(mut  mylexer) = FileLexer::new("/path/to/contact_plan_file.txt") {
 	let  mut  cp = ContactPlan::new();
-	let  res = cp.parse::<NoManagement, Box<dyn  ContactManager>, SABR>(&mut  mylexer, None, 	Some(cm_map));
+	let  res = cp.parse::<NoManagement, Box<dyn  ContactManager>, SABR>(&mut  mylexer, None, Some(cm_map));
 	// The type of res is : Result<(Vec<Node<NoManagement>, Vec<Contact<Box<dyn ContactManager>>>)>
 }
 ```
