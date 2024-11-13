@@ -12,6 +12,7 @@ use crate::{
     types::{Date, NodeID},
 };
 
+pub mod aliases;
 pub mod cgr;
 pub mod spsn;
 
