@@ -1,4 +1,4 @@
-use std::{cell::RefCell, marker::PhantomData, rc::Rc};
+use std::{cell::RefCell, cmp::Ordering, marker::PhantomData, rc::Rc};
 
 use crate::{
     bundle::Bundle, contact_manager::ContactManager, distance::Distance, node_manager::NodeManager,
@@ -10,7 +10,7 @@ use super::{Route, RouteStorage};
 /// A routing table that stores the routes for each destinations.
 ///
 /// `RoutingTable` stores and selects the best available routes for bundles. The table allows
-/// the storage of new routes and the selection of optimal routes based on the Distance<CM> trait.
+/// the storage of new routes and the selection of optimal routes based on the `Distance<CM>` trait.
 ///
 /// # Type Parameters
 /// - `NM`: A type implementing `NodeManager`, responsible for managing nodes.
@@ -18,15 +18,17 @@ use super::{Route, RouteStorage};
 /// - `D`: A type implementing `Distance<CM>`, providing a distance metric for route comparison.
 ///
 /// # Fields
-/// - `tables`: A vector of vectors of `Route<CM, D>`, where each inner vector represents
+/// - `tables`: A vector of vectors of `Route<CM>`, where each inner vector represents
 ///   routes to a specific destination node.
 /// - `_phantom_nm`: A phantom marker to associate the routing table with a `NodeManager` type.
 #[cfg_attr(feature = "debug", derive(Debug))]
 pub struct RoutingTable<NM: NodeManager, CM: ContactManager, D: Distance<CM>> {
     /// Routes are stored in a two-dimensional vector, grouped by destination node.
-    tables: Vec<Vec<Route<CM, D>>>,
+    tables: Vec<Vec<Route<CM>>>,
     #[doc(hidden)]
     _phantom_nm: PhantomData<NM>,
+    #[doc(hidden)]
+    _phantom_distance: PhantomData<D>,
 }
 
 impl<NM: NodeManager, CM: ContactManager, D: Distance<CM>> RoutingTable<NM, CM, D> {
@@ -40,11 +42,12 @@ impl<NM: NodeManager, CM: ContactManager, D: Distance<CM>> RoutingTable<NM, CM, 
             tables: Vec::new(),
             // for compilation
             _phantom_nm: PhantomData,
+            _phantom_distance: PhantomData,
         }
     }
 }
 
-impl<NM: NodeManager, CM: ContactManager, D: Distance<CM>> RouteStorage<NM, CM, D>
+impl<NM: NodeManager, CM: ContactManager, D: Distance<CM>> RouteStorage<NM, CM>
     for RoutingTable<NM, CM, D>
 {
     /// Stores a new route for a given bundle in the routing table.
@@ -55,8 +58,8 @@ impl<NM: NodeManager, CM: ContactManager, D: Distance<CM>> RouteStorage<NM, CM, 
     ///
     /// # Parameters
     /// - `bundle`: The bundle whose destination will determine the storage index.
-    /// - `route`: The `Route<CM, D>` to be stored.
-    fn store(&mut self, bundle: &Bundle, route: Route<CM, D>) {
+    /// - `route`: The `Route<CM>` to be stored.
+    fn store(&mut self, bundle: &Bundle, route: Route<CM>) {
         let dest = bundle.destinations[0];
         if self.tables.len() < 1 + dest as usize {
             self.tables.resize((dest + 1) as usize, vec![])
@@ -65,7 +68,7 @@ impl<NM: NodeManager, CM: ContactManager, D: Distance<CM>> RouteStorage<NM, CM, 
     }
 
     /// Selects the best route for a bundle, based on current network conditions and
-    /// the Distance<CM> trait.
+    /// the `Distance<CM>` trait.
     ///
     /// This function evaluates available routes to the bundle's destination, choosing the
     /// route that is most favorable according to the current time, node list. Routes are
@@ -82,7 +85,7 @@ impl<NM: NodeManager, CM: ContactManager, D: Distance<CM>> RouteStorage<NM, CM, 
     ///   explicitly in this function.
     ///
     /// # Returns
-    /// - `Some(Route<CM, D>)` if a suitable route is found.
+    /// - `Some(Route<CM>)` if a suitable route is found.
     /// - `None` if no feasible route is available.
     fn select(
         &mut self,
@@ -90,7 +93,7 @@ impl<NM: NodeManager, CM: ContactManager, D: Distance<CM>> RouteStorage<NM, CM, 
         curr_time: crate::types::Date,
         node_list: &Vec<Rc<RefCell<crate::node::Node<NM>>>>,
         _excluded_nodes_sorted: &Vec<NodeID>,
-    ) -> Option<Route<CM, D>> {
+    ) -> Option<Route<CM>> {
         let dest = bundle.destinations[0];
 
         if self.tables.len() < 1 + dest as usize {
@@ -99,7 +102,7 @@ impl<NM: NodeManager, CM: ContactManager, D: Distance<CM>> RouteStorage<NM, CM, 
 
         let routes = &self.tables[dest as usize];
 
-        let mut best_route_option: Option<Rc<RefCell<RouteStage<CM, D>>>> = None;
+        let mut best_route_option: Option<Rc<RefCell<RouteStage<CM>>>> = None;
         let mut best_index = 0;
 
         for (index, route) in routes.iter().enumerate() {
@@ -112,7 +115,7 @@ impl<NM: NodeManager, CM: ContactManager, D: Distance<CM>> RouteStorage<NM, CM, 
             ) {
                 match best_route_option {
                     Some(ref best_route) => {
-                        if new_candidate < *best_route {
+                        if D::cmp(&new_candidate.borrow(), &best_route.borrow()) == Ordering::Less {
                             best_route_option = Some(new_candidate);
                             best_index = index;
                         }
@@ -122,7 +125,7 @@ impl<NM: NodeManager, CM: ContactManager, D: Distance<CM>> RouteStorage<NM, CM, 
             }
         }
 
-        if best_route_option != None {
+        if best_route_option.is_some() {
             return Some(routes[best_index].clone());
         }
         None

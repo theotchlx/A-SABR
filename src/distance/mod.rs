@@ -1,11 +1,12 @@
 use std::cmp::Ordering;
+use std::{cell::RefCell, marker::PhantomData, rc::Rc};
 
 use crate::{contact_manager::ContactManager, route_stage::RouteStage};
 
 pub mod hop;
 pub mod sabr;
 
-/// A trait that allows RouteStages to befind custom distance comparison strategies.
+/// A trait that allows RouteStages to define custom distance comparison strategies.
 ///
 /// # Type Parameters
 /// - `CM`: A type that implements the `ContactManager` trait, representing the contact management
@@ -30,23 +31,7 @@ where
     /// - `Ordering::Less` if `first` is shorter than `second`.
     /// - `Ordering::Equal` if `first` and `second` are the same.
     /// - `Ordering::Greater` if `first` is longer than `second`.
-    fn cmp(first: &RouteStage<CM, Self>, second: &RouteStage<CM, Self>) -> Ordering;
-
-    /// Partially compares the distances between two `RouteStage` instances.
-    ///
-    /// This method provides a partial ordering of `RouteStage` instances based on
-    /// their distances, returning an `Option<Ordering>` if a valid ordering exists.
-    /// If the comparison cannot be performed (e.g., due to NaN values), `None` is returned.
-    ///
-    /// # Parameters
-    /// - `first`: The first route stage to compare.
-    /// - `second`: The second route stage to compare.
-    ///
-    /// # Returns
-    /// - `Some(Ordering)` if a valid ordering can be determined.
-    /// - `None` if the comparison is undefined.
-    fn partial_cmp(first: &RouteStage<CM, Self>, second: &RouteStage<CM, Self>)
-        -> Option<Ordering>;
+    fn cmp(first: &RouteStage<CM>, second: &RouteStage<CM>) -> Ordering;
 
     /// Checks if two `RouteStage` instances are equal in distance.
     ///
@@ -59,5 +44,38 @@ where
     /// # Returns
     /// - `true` if `first` and `second` are equal in distance.
     /// - `false` otherwise.
-    fn eq(first: &RouteStage<CM, Self>, second: &RouteStage<CM, Self>) -> bool;
+    fn eq(first: &RouteStage<CM>, second: &RouteStage<CM>) -> bool;
 }
+
+/// A helper structure for providing ordering of `Rc<RefCell<RouteStage<CM>>>`
+/// using custom `RouteStage<CM>` ordering defined by the trait `Distance<CM>`.
+pub struct DistanceWrapper<CM: ContactManager, D: Distance<CM>>(
+    pub Rc<RefCell<RouteStage<CM>>>,
+    #[doc(hidden)] pub PhantomData<D>,
+);
+
+impl<CM: ContactManager, D: Distance<CM>> DistanceWrapper<CM, D> {
+    pub fn new(route_stage: Rc<RefCell<RouteStage<CM>>>) -> Self {
+        Self(route_stage, PhantomData)
+    }
+}
+
+impl<CM: ContactManager, D: Distance<CM>> Ord for DistanceWrapper<CM, D> {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        D::cmp(&self.0.borrow(), &other.0.borrow())
+    }
+}
+
+impl<CM: ContactManager, D: Distance<CM>> PartialOrd for DistanceWrapper<CM, D> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl<CM: ContactManager, D: Distance<CM>> PartialEq for DistanceWrapper<CM, D> {
+    fn eq(&self, other: &Self) -> bool {
+        D::eq(&self.0.borrow(), &other.0.borrow())
+    }
+}
+
+impl<CM: ContactManager, D: Distance<CM>> Eq for DistanceWrapper<CM, D> {}
