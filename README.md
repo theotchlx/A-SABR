@@ -177,7 +177,7 @@ The ```FileLexer``` forces you to declare the node names, and will work with the
 ```rust
 if  let  Ok(mut  mylexer) = FileLexer::new("/path/to/contact_plan_file.txt") {
   let  mut  cp = ContactPlan::new();
-  let  res = cp.parse::<NoManagement, Box<NewManager>, SABR>(&mut  mylexer, None, None);
+  let  res = cp.parse::<NoManagement, Box<NewManager>>(&mut  mylexer, None, None);
   // The type of res is : Result<(Vec<Node<NoManagement>, Vec<Contact<Box<NewManager>>>)>
 }
 
@@ -210,7 +210,7 @@ cm_map.add("seg", coerce_cm::<SegmentationManager>);
 
 if  let  Ok(mut  mylexer) = FileLexer::new("/path/to/contact_plan_file.txt") {
   let  mut  cp = ContactPlan::new();
-  let  res = cp.parse::<NoManagement, Box<dyn  ContactManager>, SABR>(&mut  mylexer, None, Some(cm_map));
+  let  res = cp.parse::<NoManagement, Box<dyn  ContactManager>>(&mut  mylexer, None, Some(cm_map));
   // The type of res is : Result<(Vec<Node<NoManagement>, Vec<Contact<Box<dyn ContactManager>>>)>
 }
 ```
@@ -271,4 +271,4 @@ Increasing the coupling for flexibility can create some overhead (e.g. with extr
 
 - By design,  with the effect of lowering slightly the flexibility (e.g. with the differenciation of trees and routes for storage). In some case, this can prevent compositions between uncompatible building blocks.
 
-- With compilation features, with the effect of requiring a recompilation of the library to use some algorithms with maximal performance. If recompilation of the library is not an option, all features can be enabled : some unecessary overhead is expected for the memory pressure (e.g. with contacts carrying a work area even for non contact graph pathfinding) and control flow (e.g. calls to node management functions that have no effects with the ```NoManagement``` concrete implementation). In this case the remaining hard contraint is the unability to exchange the distance calculation at runtime (e.g. you can test all ```SABR``` algorithms but need to recompile for the ```Hop``` ones). 
+- With compilation features, with the effect of requiring a recompilation of the library to use some algorithms with maximal performance. If recompilation of the library is not an option, all features can be enabled : some unecessary overhead is expected for the memory pressure (e.g. with contacts carrying a work area even for non contact graph pathfinding) and control flow (e.g. calls to node management functions that have no effects with the ```NoManagement``` concrete implementation).
