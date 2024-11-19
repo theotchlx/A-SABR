@@ -284,7 +284,7 @@ To lower the coupling and lower memory overhead, the framework enforces a differ
 
 ## Full Example
 
-Initialization and routing with an ASABR contact plan using ```ETOManager``` and ```SegmentationManager``` types of ```ContactManager```.
+Initialization and routing with an ASABR contact plan using ```ETOManager``` and ```SegmentationManager``` types of ```ContactManager```. Use of the ```SpsnContactGraph``` alias for SPSN using SABR distance and contact graph pathfinding for multicast bundles:
 
 
 ```rust
@@ -300,7 +300,7 @@ if let Ok(mut mylexer) = FileLexer::new("/path/to/asabr_cp.txt") {
   if let Ok((nodes, contacts)) = res{
     {
       let tree_cache = Rc::new(RefCell::new(TreeCache::new(true, false, 10)));
-      let mut SPSN = SpsnSabrContactGraph::<NoManagement, Box<dyn ContactManager>>::new(nodes, contacts, tree_cache, false);
+      let mut SPSN = SpsnContactGraph::<NoManagement, Box<dyn ContactManager>>::new(nodes, contacts, tree_cache, false);
       let multicast_bundle = Bundle {
         source: 0,
         destinations: vec![1, 2, 3, 4],
