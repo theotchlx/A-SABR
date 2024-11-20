@@ -124,23 +124,23 @@ fn try_insert<CM: ContactManager>(
     for (idx, route) in routes_for_rx_node.iter().enumerate() {
         // Strictly better for:
         // - arrival time
-        let route = routes_for_rx_node[insert_index].borrow();
+        let route_borrowed = route.borrow();
 
-        if proposition.at_time < route.at_time {
+        if proposition.at_time < route_borrowed.at_time {
             insert = true;
             insert_index = idx;
             break;
         }
-        if proposition.at_time == route.at_time {
+        if proposition.at_time == route_borrowed.at_time {
             // - hop count
-            if proposition.hop_count < route.hop_count {
+            if proposition.hop_count < route_borrowed.hop_count {
                 insert = true;
                 insert_index = idx;
                 break;
             }
-            if proposition.hop_count == route.hop_count {
+            if proposition.hop_count == route_borrowed.hop_count {
                 // - expiration time
-                if proposition.expiration > route.expiration {
+                if proposition.expiration > route_borrowed.expiration {
                     insert = true;
                     insert_index = idx;
                     break;
@@ -149,13 +149,13 @@ fn try_insert<CM: ContactManager>(
         // Partially better for :
         } else {
             // - maybe expiration : too risky
-            if proposition.hop_count > route.hop_count {
+            if proposition.hop_count > route_borrowed.hop_count {
                 insert = false;
                 break;
             }
-            if proposition.hop_count == route.hop_count {
+            if proposition.hop_count == route_borrowed.hop_count {
                 // - nothing : reject
-                if proposition.expiration <= route.expiration {
+                if proposition.expiration <= route_borrowed.expiration {
                     insert = false;
                     break;
                 }

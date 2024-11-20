@@ -1,9 +1,9 @@
 
-# Adaptive Schedule-Aware Bundle Routing [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](LICENSE) [![Rust](https://img.shields.io/badge/rust-1.82%2B-orange.svg)](https://www.rust-lang.org)
+# Adaptive Schedule-Aware Bundle Routing [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE) [![Rust](https://img.shields.io/badge/rust-1.82%2B-orange.svg)](https://www.rust-lang.org)
 
 ## Description
 
-See documentation [here](https://maore-dtn.lirmm.net/a-sabr/a_sabr)
+Current version is a beta release (contact olivier.de-jonckere@lirmm.fr for more information). See source documentation [here](https://maore-dtn.lirmm.net/a-sabr/a_sabr).
 
 The A-SABR project provides a framework to instantiate routing algorithms from research activities up to operational contexts. This project was developed after the experience gathered from CGR at the Jet Propulsion Laboratory and the scalability researches around Schedule-Aware Bundle Routing (SABR)'s scalability with SPSN at the University of Dresden.
 
@@ -261,6 +261,16 @@ Two other format are supported for file sources. Those parsers do not variabilit
       // ...
     }
 ```
+
+Current limitations:
+
+- Both parsers only support file sources: they are not implemented with the A-SABR lexer & parser framework, as the latter presuppose A-SABR ordering of the tokens provided by the former.
+
+- The ION format only supports the "a contact" and "a range" lines. Contiguous contacts between the same pair of nodes and different data rates are not converted in a single contact if ```SegmentationManager``` is requested, and the parser only supports one range entry per contact entry.
+
+- The TVG util format does not currently support variations of data rate and delays for a contact entry, only the first "generation" is considered.
+
+Until parsing capabilities extensions, please use A-SABR format instead.
 
 ## Multigraph
 
