@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 
-use crate::{contact_manager::ContactManager, route_stage::RouteStage};
+use crate::{contact_manager::ContactManager, pathfinding::mpt::MptOrd, route_stage::RouteStage};
 
 use super::Distance;
 
@@ -73,5 +73,16 @@ impl<CM: ContactManager> Distance<CM> for Hop {
         first.at_time == second.at_time
             && first.hop_count == second.hop_count
             && first.expiration == second.expiration
+    }
+}
+
+impl<CM: ContactManager> MptOrd<CM> for Hop {
+    // For Hop, the secondary metric to consider is the arrival time.
+    fn can_retain(prop: &RouteStage<CM>, known: &RouteStage<CM>) -> bool {
+        return prop.at_time < known.at_time;
+    }
+    // Ignore expiration constraints to prioritize performance.
+    fn must_prune(prop: &RouteStage<CM>, known: &RouteStage<CM>) -> bool {
+        return prop.at_time <= known.at_time && prop.hop_count <= known.hop_count;
     }
 }
