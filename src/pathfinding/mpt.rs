@@ -1,4 +1,10 @@
-use std::{cell::RefCell, cmp::Reverse, collections::BinaryHeap, marker::PhantomData, rc::Rc};
+use std::{
+    cell::RefCell,
+    cmp::{Ordering, Reverse},
+    collections::BinaryHeap,
+    marker::PhantomData,
+    rc::Rc,
+};
 
 use crate::{
     bundle::Bundle,
@@ -9,6 +15,40 @@ use crate::{
     route_stage::RouteStage,
     types::{Date, NodeID},
 };
+
+/// A trait that allows Mpt to handle nage the lexicographic costs.
+///
+/// # Type Parameters
+/// - `CM`: A type that implements the `ContactManager` trait, representing the contact management
+///         system used to manage and compare routes.
+pub trait MptOrd<CM>
+where
+    CM: ContactManager,
+{
+    /// Determines whether the proposed route stage can be retained based on the known route stage.
+    /// For example, in SABR's case, a route proposal might still be part of the end-to-end route for another
+    /// destination if its hop count is lower than the known route's, even if the proposal has a later arrival time.
+    ///
+    /// # Parameters
+    /// - `prop`: A reference to the proposed `RouteStage`. This represents the current state being evaluated for retention.
+    /// - `known`: A reference to the known `RouteStage`. This represents the baseline or reference state for comparison.
+    ///
+    /// # Returns
+    /// - `true` if the `prop` can be retained considering the `known` route stage.
+    /// - `false` otherwise.
+    fn can_retain(prop: &RouteStage<CM>, known: &RouteStage<CM>) -> bool;
+
+    /// Determines whether the knwon route should be pruned due to the proposition's retention.
+    ///
+    /// # Parameters
+    /// - `prop`: A reference to the proposed `RouteStage`. This represents the proposition that was retained.
+    /// - `known`: A reference to the known `RouteStage`. This represents the candidate for pruning.
+    ///
+    /// # Returns
+    /// - `true` if the `known` can be pruned considering the `prop` route stage.
+    /// - `false` otherwise.
+    fn must_prune(prop: &RouteStage<CM>, known: &RouteStage<CM>) -> bool;
+}
 
 /// A structure representing a work area for multi-path tracking (MPT) pathfinding.
 ///
@@ -107,12 +147,13 @@ use super::{try_make_hop, PathFindingOutput, Pathfinding};
 ///
 /// * `Option<Rc<RefCell<RouteStage<CM>>>>` - Returns an `Option` containing a reference to the
 ///   newly inserted route if the insertion was successful; otherwise, returns `None`.
-fn try_insert<CM: ContactManager>(
+fn try_insert<CM: ContactManager, D: Distance<CM> + MptOrd<CM>>(
     proposition: RouteStage<CM>,
     tree: &mut MptWorkArea<CM>,
 ) -> Option<Rc<RefCell<RouteStage<CM>>>> {
     let routes_for_rx_node = &mut tree.by_destination[proposition.to_node as usize];
-    let mut insert_index: usize = 0;
+    // if D::can_retain sets insert to true, but the next element does not trigger insert_index =idx, insert at the end
+    let mut insert_index: usize = routes_for_rx_node.len();
     let mut insert = false;
 
     if routes_for_rx_node.is_empty() {
@@ -122,57 +163,35 @@ fn try_insert<CM: ContactManager>(
     }
 
     for (idx, route) in routes_for_rx_node.iter().enumerate() {
-        // Strictly better for:
-        // - arrival time
         let route_borrowed = route.borrow();
-
-        if proposition.at_time < route_borrowed.at_time {
-            insert = true;
-            insert_index = idx;
-            break;
-        }
-        if proposition.at_time == route_borrowed.at_time {
-            // - hop count
-            if proposition.hop_count < route_borrowed.hop_count {
-                insert = true;
+        match D::cmp(&proposition, &route_borrowed) {
+            Ordering::Less => {
+                // If we reached a positive can_retain call on the previous element
                 insert_index = idx;
+                insert = true;
                 break;
             }
-            if proposition.hop_count == route_borrowed.hop_count {
-                // - expiration time
-                if proposition.expiration > route_borrowed.expiration {
-                    insert = true;
-                    insert_index = idx;
-                    break;
-                }
-            }
-        // Partially better for :
-        } else {
-            // - maybe expiration : too risky
-            if proposition.hop_count > route_borrowed.hop_count {
+            Ordering::Equal => {
                 insert = false;
                 break;
             }
-            if proposition.hop_count == route_borrowed.hop_count {
-                // - nothing : reject
-                if proposition.expiration <= route_borrowed.expiration {
+            Ordering::Greater => {
+                if D::can_retain(&proposition, &route_borrowed) {
+                    insert = true;
+                    continue;
+                } else {
                     insert = false;
                     break;
                 }
-            } else {
-                // - hop count : ok be verify a next know route is not better
-                insert = true;
-                insert_index = idx;
             }
         }
     }
-
     if insert {
         let mut truncate_index = insert_index;
         // detect the first prune event but do nothing
         while truncate_index < routes_for_rx_node.len() {
             let route = &routes_for_rx_node[truncate_index].borrow();
-            if proposition.at_time <= route.at_time && proposition.hop_count <= route.hop_count {
+            if D::must_prune(&proposition, &route) {
                 break;
             }
             truncate_index += 1
@@ -207,14 +226,14 @@ macro_rules! define_mpt {
         /// * `NM` - A type that implements the `NodeManager` trait.
         /// * `CM` - A type that implements the `ContactManager` trait.
         /// * `D` - A type that implements the `Distance<CM>` trait.
-        pub struct $name<NM: NodeManager, CM: ContactManager, D: Distance<CM>> {
+        pub struct $name<NM: NodeManager, CM: ContactManager, D: Distance<CM> + MptOrd<CM>> {
             /// The node multigraph for contact access.
             graph: Rc<RefCell<Multigraph<NM, CM>>>,
             #[doc(hidden)]
             _phantom_distance: PhantomData<D>,
         }
 
-        impl<NM: NodeManager, CM: ContactManager, D: Distance<CM>> Pathfinding<NM, CM>
+        impl<NM: NodeManager, CM: ContactManager, D: Distance<CM> + MptOrd<CM>> Pathfinding<NM, CM>
             for $name<NM, CM, D>
         {
             /// Constructs a new `Mpt` instance with the provided nodes and contacts.
@@ -307,7 +326,9 @@ macro_rules! define_mpt {
                                 &receiver.node,
                             ) {
                                 // This transforms a prop in the stack to a prop in the heap
-                                if let Some(new_route) = try_insert(route_proposition, &mut tree) {
+                                if let Some(new_route) =
+                                    try_insert::<CM, D>(route_proposition, &mut tree)
+                                {
                                     priority_queue
                                         .push(Reverse(DistanceWrapper::new(new_route.clone())));
                                 }

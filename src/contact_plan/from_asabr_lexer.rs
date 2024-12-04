@@ -1,4 +1,3 @@
-
 use crate::{
     contact::{Contact, ContactInfo},
     contact_manager::ContactManager,
