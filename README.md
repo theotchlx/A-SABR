@@ -77,6 +77,16 @@ A-SABR provides a list of already composed algorithms :
 
 - CgrHopFirstDepletedContactGraph
 
+And a list of already composed volume management techniques :
+
+- EVLmanager (Effective Volume Limit)
+
+- ETOmanager (Earliest Transmission Opportunity, for first hop contacts only)
+
+- QDManager (Queue Delay, an ETO variant for the next hops)
+
+- SegmentationManager (contact segmentation)
+
 ## Not only SABR
 
 The types that represent progression of pathfinding algorithms as well as the final routes are templated with the ```Distance``` trait. Concrete implementations of the Distance trait act as proxies for distance comparison between the routes, called ```RouteStage```. For compatibility with all pathfinding techniques, the contacts are consequently templated the ```Distance``` trait, by carrying a ```RouteStage``` for contact graph (or contact parenting) pathfinding. A ```RouteStage``` is conceptually equivalent to contact work areas of ION.
