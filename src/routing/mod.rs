@@ -30,7 +30,7 @@ pub mod spsn;
 ///       the first hop.
 #[cfg_attr(feature = "debug", derive(Debug))]
 pub struct RoutingOutput<CM: ContactManager> {
-    first_hops: HashMap<usize, (Rc<RefCell<Contact<CM>>>, Vec<NodeID>)>,
+    pub first_hops: HashMap<usize, (Rc<RefCell<Contact<CM>>>, Vec<NodeID>)>,
 }
 
 /// Builds the routing output from the source route and reached nodes.
