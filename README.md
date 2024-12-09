@@ -72,12 +72,24 @@ A-SABR provides a list of already composed algorithms :
 - CgrHopFirstEndingNodeGraph
 
 - CgrHopFirstDepletedNodeGraph
-
 - CgrHopFirstEndingContactGraph
-
 - CgrHopFirstDepletedContactGraph
 
-And a list of already composed volume management techniques :
+The SPSN based algorithms create shortest-path tree rather than single paths and consider the bundle metrics (prioirty and size) during tree computation to ensure at most one tree computation per bundle. A tree can be reused as long as the bundles to schedule show less constraining metrics (e.g. lower priority and smaller size) in comparison to the bundle metrics that were used to construct the present tree.
+
+The CGR based algorithms create single destination routes and do not consider the bundle metrics for path computation. Several path construction might be required for a single bundle scheduling and they rely more extensively on route selection (as expected by the SABR standard).
+
+The algorithms are based on 3 pathfinding techniques :
+- NodeGraph : Dijkstra with node to node tracking.
+- Mpt : Dijkstra with contact to contact tracking, tracking of multiple paths to individual node instead of direct overriding, and node based filtering.
+- ContactGraph : Dijkstra with contact to contact tracking, as in CGR.
+
+And 2 alternative path strategy (for CGR-like algorithms):
+
+- FirstEnding : Suppress first ending contact of the last found route before next computation.
+- FirstDepleted : Suppress the contact with the smallest original volume limit before the next computation.
+
+And a list of volume management techniques :
 
 - EVLmanager (Effective Volume Limit)
 
@@ -343,3 +355,12 @@ Increasing the coupling for flexibility can create some overhead (e.g. with extr
 - By design,  with the effect of lowering slightly the flexibility (e.g. with the differenciation of trees and routes for storage). In some case, this can prevent compositions between uncompatible building blocks.
 
 - With compilation features, with the effect of requiring a recompilation of the library to use some algorithms with maximal performance. If recompilation of the library is not an option, all features can be enabled : some unecessary overhead is expected for the memory pressure (e.g. with contacts carrying a work area even for non contact graph pathfinding) and control flow (e.g. calls to node management functions that have no effects with the ```NoManagement``` concrete implementation).
+
+## References
+- EVL (Effective Volume Limit) : Blue Book, “Schedule-aware bundle routing,” Consultative Committee for Space Data Systems, 2019.
+- ETO (Earliest Transmission Opportunity) : N. Bezirgiannidis, C. Caini, D. P. Montenero, M. Ruggieri, and V. Tsaoussidis, “Contact graph routing enhancements for delay tolerant space communications,” in 2014 7th advanced satellite multimedia systems conference and the 13th signal processing for space communications workshop (ASMS/SPSC). IEEE, 2014, pp. 17–23.
+- Queue-delay : C. Caini, G. M. De Cola, and L. Persampieri, “Schedule-aware bundle routing: Analysis and enhancements,” International Journal of Satellite Communications and Networking, vol. 39, no. 3, pp. 237–249, 2021.
+- Contact segmentation : De Jonckere, O., Fraire, J. A. A., & Burleigh, S. (2024). Distributed Volume Management in Space DTNs: Scoping Schedule-Aware Bundle Routing.
+- FirstEnding & FirstDepleted :  A. Fraire, P. G. Madoery, A. Charif, and J. M. Finochietto, “On route table computation strategies in delay-tolerant satellite networks,” Ad Hoc Networks, vol. 80, pp. 31–40, 2018
+- Mpt (multipath-tracking): O. De Jonckère, J. A. Fraire, and S. Burleigh, “Enhanced pathfinding and scalability with shortest-path tree routing for space networks,” in ICC 2023-IEEE International Conference on Communications. IEEE, 2023, pp. 4082–4088.
+- Contact Graph Routing : J. A. Fraire, O. De Jonckère, and S. C. Burleigh, “Routing in the space internet: A contact graph routing tutorial,” Journal of Network and Computer Applications, vol. 174, p. 102884, 2021.
