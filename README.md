@@ -77,7 +77,7 @@ A-SABR provides a list of already composed algorithms :
 
 The SPSN based algorithms create shortest-path tree rather than single paths and consider the bundle metrics (prioirty and size) during tree computation to ensure at most one tree computation per bundle. A tree can be reused as long as the bundles to schedule show less constraining metrics (e.g. lower priority and smaller size) in comparison to the bundle metrics that were used to construct the present tree.
 
-The CGR based algorithms create single destination routes and do not consider the bundle metrics for path computation. Several path construction might be required for a single bundle scheduling and they rely more extensively on route selection (as expected by the SABR standard).
+The CGR based algorithms create single destination routes and do not consider the bundle metrics for path computation. Several path constructions might be required for a single bundle scheduling and they rely more extensively on route selection (as expected by the SABR standard).
 
 The algorithms are based on 3 pathfinding techniques :
 - NodeGraph : Dijkstra with node to node tracking.
@@ -101,7 +101,7 @@ And a list of volume management techniques :
 
 ## Not only SABR
 
-The types that represent progression of pathfinding algorithms as well as the final routes are templated with the ```Distance``` trait. Concrete implementations of the Distance trait act as proxies for distance comparison between the routes, called ```RouteStage```. For compatibility with all pathfinding techniques, the contacts are consequently templated the ```Distance``` trait, by carrying a ```RouteStage``` for contact graph (or contact parenting) pathfinding. A ```RouteStage``` is conceptually equivalent to contact work areas of ION.
+The types that represent progression of pathfinding algorithms as well as the final routes are templated with the ```Distance``` trait. Concrete implementations of the Distance trait act as proxies for distance comparison between the routes, called ```RouteStage```. For compatibility with all pathfinding techniques, the contacts are consequently templated with the ```Distance``` trait, by carrying a ```RouteStage``` for contact graph (or contact parenting) pathfinding. A ```RouteStage``` is conceptually equivalent to contact work areas of ION.
 
 ___Performance note___ : the work area is attached to the contact if and only if the **contact_graph** compilation feature is enabled. Without this feature, no memory overhead remains as the ```Distance``` concrete types are usually implemented as empty structures (see ```SABR``` and ```Hop``` distance implementations).
 
@@ -194,7 +194,7 @@ impl  Parser<NewManager> for  NewManager {
 
 Once the new managers are defined with implementations of the ContactManager and Parser traits, a "native" contact plan format can be derived from the various manager implementations. We will consider the example ```NewManager```, and the library-provided ```ContactSegmentation```.
 
-If you wish to use a unique manager types (e.g. a **boxed**  ```NewManager``` for the contacts and ```NoManagement``` for the nodes) no other action is required for dispatching, and you can extract the nodes and contacts from a lexer. The format of the contact consists of the shared metrics concatenated with the metrics defined by the Parser implemention (for ```NewManager```, a ```Delay``` value is expected).
+If you wish to use a unique manager types (e.g. a **boxed**  ```NewManager``` for the contacts and ```NoManagement``` for the nodes) no other action is required for dispatching, and you can extract the nodes and contacts from a lexer. The format of the contact consists of the shared metrics concatenated with the metrics defined by the Parser implementation (for ```NewManager```, a ```Delay``` value is expected).
 
 The ```FileLexer``` forces you to declare the node names, and will work with the following parsing logic :
 
@@ -361,6 +361,6 @@ Increasing the coupling for flexibility can create some overhead (e.g. with extr
 - ETO (Earliest Transmission Opportunity) : N. Bezirgiannidis, C. Caini, D. P. Montenero, M. Ruggieri, and V. Tsaoussidis, “Contact graph routing enhancements for delay tolerant space communications,” in 2014 7th advanced satellite multimedia systems conference and the 13th signal processing for space communications workshop (ASMS/SPSC). IEEE, 2014, pp. 17–23.
 - Queue-delay : C. Caini, G. M. De Cola, and L. Persampieri, “Schedule-aware bundle routing: Analysis and enhancements,” International Journal of Satellite Communications and Networking, vol. 39, no. 3, pp. 237–249, 2021.
 - Contact segmentation : De Jonckere, O., Fraire, J. A. A., & Burleigh, S. (2024). Distributed Volume Management in Space DTNs: Scoping Schedule-Aware Bundle Routing.
-- FirstEnding & FirstDepleted :  A. Fraire, P. G. Madoery, A. Charif, and J. M. Finochietto, “On route table computation strategies in delay-tolerant satellite networks,” Ad Hoc Networks, vol. 80, pp. 31–40, 2018
-- Mpt (multipath-tracking): O. De Jonckère, J. A. Fraire, and S. Burleigh, “Enhanced pathfinding and scalability with shortest-path tree routing for space networks,” in ICC 2023-IEEE International Conference on Communications. IEEE, 2023, pp. 4082–4088.
+- FirstEnding & FirstDepleted : A. Fraire, P. G. Madoery, A. Charif, and J. M. Finochietto, “On route table computation strategies in delay-tolerant satellite networks,” Ad Hoc Networks, vol. 80, pp. 31–40, 2018
+- Mpt (multipath-tracking) : O. De Jonckère, J. A. Fraire, and S. Burleigh, “Enhanced pathfinding and scalability with shortest-path tree routing for space networks,” in ICC 2023-IEEE International Conference on Communications. IEEE, 2023, pp. 4082–4088.
 - Contact Graph Routing : J. A. Fraire, O. De Jonckère, and S. C. Burleigh, “Routing in the space internet: A contact graph routing tutorial,” Journal of Network and Computer Applications, vol. 174, p. 102884, 2021.
