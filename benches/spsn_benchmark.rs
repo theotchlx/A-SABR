@@ -1,11 +1,11 @@
-use std::{cell::RefCell, rc::Rc, time::Duration};
+use std::{cell::RefCell, rc::Rc};
 
 use a_sabr::{
     bundle::Bundle, contact_manager::seg::SegmentationManager,
     contact_plan::from_tvgutil_file::TVGUtilContactPlan, route_storage::cache::TreeCache,
     routing::aliases::*, types::NodeID,
 };
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{black_box, criterion_group, criterion_main, BatchSize, Criterion};
 
 macro_rules! make_spsn_router {
     ($router_type:ident, $ptvg_filepath:expr) => {{
@@ -31,8 +31,6 @@ macro_rules! blackbox_route_bundle {
 
 pub fn spsn_mpt_benchmark(c: &mut Criterion) {
     let ptvg_filepath = "benches/ptvg_files/sample1.json";
-    let mut router_sabr = make_spsn_router!(SpsnMpt, ptvg_filepath);
-    let mut router_hop = make_spsn_router!(SpsnHopMpt, ptvg_filepath);
 
     let source = 178;
     let bundle = Bundle {
@@ -47,16 +45,28 @@ pub fn spsn_mpt_benchmark(c: &mut Criterion) {
 
     let mut group = c.benchmark_group("SpsnMpt");
     group.bench_function("SABR", |b| {
-        b.iter(|| blackbox_route_bundle!(router_sabr, source, &bundle, curr_time, &excluded_nodes))
+        b.iter_batched(
+            || make_spsn_router!(SpsnMpt, ptvg_filepath),
+            |mut router| {
+                blackbox_route_bundle!(router, source, &bundle, curr_time, &excluded_nodes);
+            },
+            BatchSize::SmallInput,
+        );
     });
     group.bench_function("Hop", |b| {
-        b.iter(|| blackbox_route_bundle!(router_hop, source, &bundle, curr_time, &excluded_nodes))
+        b.iter_batched(
+            || make_spsn_router!(SpsnHopMpt, ptvg_filepath),
+            |mut router| {
+                blackbox_route_bundle!(router, source, &bundle, curr_time, &excluded_nodes);
+            },
+            BatchSize::SmallInput,
+        );
     });
 }
 
 criterion_group! {
     name=benches;
-    config=Criterion::default().measurement_time(Duration::from_secs(10));
+    config=Criterion::default().sample_size(50);
     targets=spsn_mpt_benchmark
 }
 criterion_main!(benches);
