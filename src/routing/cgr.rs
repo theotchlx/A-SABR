@@ -116,16 +116,13 @@ impl<S: RouteStorage<NM, CM>, NM: NodeManager, CM: ContactManager, P: Pathfindin
                     &self.pathfinding.get_multigraph().borrow_mut().nodes,
                 );
 
-                match dry_run {
-                    Some(_) => {
-                        return Some(schedule_unicast_path(
-                            bundle,
-                            curr_time,
-                            route.source_stage.clone(),
-                            &self.pathfinding.get_multigraph().borrow_mut().nodes,
-                        ))
-                    }
-                    None => break,
+                if let Some(_) = dry_run {
+                    return Some(schedule_unicast_path(
+                        bundle,
+                        curr_time,
+                        route.source_stage.clone(),
+                        &self.pathfinding.get_multigraph().borrow_mut().nodes,
+                    ));
                 }
             } else {
                 break;
