@@ -128,6 +128,9 @@ impl<S: RouteStorage<NM, CM>, NM: NodeManager, CM: ContactManager, P: Pathfindin
                     None => break,
                 }
             }
+            else {
+                break;
+            }
         }
         None
     }

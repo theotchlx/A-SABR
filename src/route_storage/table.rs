@@ -120,7 +120,10 @@ impl<NM: NodeManager, CM: ContactManager, D: Distance<CM>> RouteStorage<NM, CM>
                             best_index = index;
                         }
                     }
-                    None => best_route_option = Some(new_candidate),
+                    None => {
+                        best_route_option = Some(new_candidate);
+                        best_index = index;
+                    }
                 }
             }
         }
