@@ -331,8 +331,7 @@ macro_rules! create_new_alternative_path_variant {
         > {
             /// The underlying pathfinding algorithm used to find individual paths.
             pathfinding: P,
-            /// An optional `Contact` that will be suppressed before the pathfinding stage.
-            next_to_suppress: Option<std::rc::Rc<std::cell::RefCell<Contact<CM>>>>,
+            suppression_map: Vec<Vec<std::rc::Rc<std::cell::RefCell<Contact<CM>>>>>,
 
             #[doc(hidden)]
             _phantom_nm: std::marker::PhantomData<NM>,
@@ -360,9 +359,11 @@ macro_rules! create_new_alternative_path_variant {
             fn new(
                 multigraph: std::rc::Rc<std::cell::RefCell<crate::multigraph::Multigraph<NM, CM>>>
             ) -> Self {
+                let node_count = multigraph.borrow().get_node_count();
                 Self {
+
                     pathfinding: P::new(multigraph),
-                    next_to_suppress: None,
+                    suppression_map: vec![Vec::new(); node_count],
                     _phantom_nm: std::marker::PhantomData,
                     _phantom_cm: std::marker::PhantomData,
                 }
@@ -386,19 +387,29 @@ macro_rules! create_new_alternative_path_variant {
                 bundle: &crate::bundle::Bundle,
                 excluded_nodes_sorted: &Vec<crate::types::NodeID>,
             ) -> super::PathFindingOutput<CM> {
-                if let Some(contact) = &self.next_to_suppress {
-                    contact.borrow_mut().suppressed = true;
-                }
+
+                self.suppression_map[bundle.destinations[0] as usize].retain(|contact| {
+                    if contact.borrow().info.end < current_time {
+                        false
+                    } else {
+                        contact.borrow_mut().suppressed = true;
+                        true
+                    }
+                });
+
                 let tree = self
                     .pathfinding
                     .get_next(current_time, source, bundle, excluded_nodes_sorted);
-                // As long as current_time is not retrieved in real-time, doing this before (by storing the whole last route) or after tree construction is equivalent
+
                 if let Some(route) = tree.by_destination[bundle.destinations[0] as usize].clone() {
-                    self.next_to_suppress = crate::pathfinding::get_next_to_suppress(
-                        route,
-                        $better_fn,
-                    );
+                    if let Some(contact) = crate::pathfinding::get_next_to_suppress(route, $better_fn) {
+                        self.suppression_map[bundle.destinations[0] as usize].push(contact);
+                    }
                 }
+                for contact in &self.suppression_map[bundle.destinations[0] as usize] {
+                    contact.borrow_mut().suppressed = false;
+                }
+
                 return tree;
             }
 
