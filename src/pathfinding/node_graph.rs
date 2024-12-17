@@ -95,15 +95,16 @@ macro_rules! define_node_graph {
                     if node_id == source as usize {
                         tree.by_destination[node_id as usize] = Some(source_route.clone());
                     } else {
-                        tree.by_destination[node_id as usize] = Some(Rc::new(RefCell::new(
-                            RouteStage::new_work_area(node_id as NodeID),
-                        )));
+                        tree.by_destination[node_id as usize] = None;
                     }
                 }
 
                 priority_queue.push(Reverse(DistanceWrapper::new(Rc::clone(&source_route))));
 
                 while let Some(Reverse(DistanceWrapper(from_route, _))) = priority_queue.pop() {
+                    if from_route.borrow().is_disabled {
+                        continue;
+                    }
                     let tx_node_id = from_route.borrow().to_node;
                     if !$is_tree_output {
                         if bundle.destinations[0] == tx_node_id {
@@ -130,25 +131,28 @@ macro_rules! define_node_graph {
                                 &sender.node,
                                 &receiver.node,
                             ) {
+                                let mut push = false;
                                 if let Some(know_route_ref) = tree.by_destination
                                     [receiver.node.borrow().info.id as usize]
                                     .clone()
                                 {
-                                    let mut push = false;
                                     {
                                         let mut known_route = know_route_ref.borrow_mut();
                                         if D::cmp(&route_proposition, &known_route)
                                             == Ordering::Less
                                         {
-                                            known_route.update_with(&route_proposition);
+                                            known_route.is_disabled = true;
                                             push = true;
                                         }
                                     }
-                                    if push {
-                                        priority_queue.push(Reverse(DistanceWrapper::new(
-                                            know_route_ref.clone(),
-                                        )));
-                                    }
+                                } else {
+                                    push = true;
+                                }
+                                if push {
+                                    let route_ref = Rc::new(RefCell::new(route_proposition));
+                                    tree.by_destination[receiver.node.borrow().info.id as usize] =
+                                        Some(route_ref.clone());
+                                    priority_queue.push(Reverse(DistanceWrapper::new(route_ref)));
                                 }
                             }
                         }

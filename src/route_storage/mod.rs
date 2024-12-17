@@ -70,7 +70,6 @@ impl<CM: ContactManager> Route<CM> {
                 destination_stage,
             });
         }
-
         return None;
     }
 }

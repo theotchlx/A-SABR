@@ -82,6 +82,17 @@ impl<CM: ContactManager> RouteStage<CM> {
         }
     }
 
+    pub fn clone(&self) -> RouteStage<CM> {
+        let mut route = Self::new(self.at_time, self.to_node, self.via.clone());
+        route.is_disabled = self.is_disabled;
+        route.via = self.via.clone();
+        route.hop_count = self.hop_count;
+        route.cumulative_delay = self.cumulative_delay;
+        route.expiration = self.expiration;
+
+        return route;
+    }
+
     /// Creates a new `RouteStage` intended for use as a work area.
     ///
     /// # Parameters
