@@ -19,42 +19,6 @@ use crate::{
 
 use super::{try_make_hop, PathFindingOutput, Pathfinding};
 
-/// Attempts to update the current work area of a contact if the new route proposition is "closer".
-///
-/// This function checks if the new route proposition is an improvement over the current work area
-/// for a given contact. If it is, the work area is updated and a reference to it is returned.
-///
-/// # Type Parameters
-/// * `CM`: A type implementing the `ContactManager` trait, representing the contact management
-///         system for the route.
-/// * `D`: A type implementing the `Distance` trait, providing the distance metric used to
-///        compare routes.
-///
-/// # Parameters
-///
-/// * `route_proposition` - A `RouteStage` that proposes a new route for a contact.
-///
-/// # Returns
-///
-/// * `Option<Rc<RefCell<RouteStage<CM>>>>` - An optional reference to the updated work area if the proposition is "closer".
-fn update_if_closer<CM: ContactManager, D: Distance<CM>>(
-    route_proposition: RouteStage<CM>,
-) -> Option<Rc<RefCell<RouteStage<CM>>>> {
-    if let Some(via) = route_proposition.via.as_ref() {
-        let contact_ref = via.contact.borrow_mut();
-        let mut current_work_area = contact_ref.work_area.borrow_mut();
-        {
-            if !(D::cmp(&route_proposition, &current_work_area) == Ordering::Less) {
-                return None;
-            }
-        }
-        current_work_area.update_with(&route_proposition);
-        return Some(contact_ref.work_area.clone());
-    }
-    // This will never happen (the proposition shall always have a via_contact)
-    return None;
-}
-
 macro_rules! define_contact_graph {
     ($name:ident, $is_tree_output:tt, $with_exclusions:tt) => {
         /// A contact parenting (contact graph) implementation of Dijkstra algorithm.
@@ -160,6 +124,9 @@ macro_rules! define_contact_graph {
                 priority_queue.push(Reverse(DistanceWrapper::new(Rc::clone(&source_route))));
 
                 while let Some(Reverse(DistanceWrapper(from_route, _))) = priority_queue.pop() {
+                    if from_route.borrow().is_disabled {
+                        continue;
+                    }
                     let tx_node_id = from_route.borrow().to_node;
 
                     if !$is_tree_output {
@@ -195,21 +162,39 @@ macro_rules! define_contact_graph {
                                 &sender.node,
                                 &receiver.node,
                             ) {
-                                if let Some(updated_route) =
-                                    update_if_closer::<CM, D>(route_proposition)
-                                {
-                                    if let Some(via) = &updated_route.borrow().via {
-                                        altered_contacts.push(via.contact.clone());
+                                let mut push = false;
+                                if let Some(hop) = &route_proposition.via {
+                                    if let Some(know_route_ref) = &hop.contact.borrow().work_area {
+                                        let mut know_route = know_route_ref.borrow_mut();
+                                        if D::cmp(&route_proposition, &know_route) == Ordering::Less
+                                        {
+                                            know_route.is_disabled = true;
+                                            push = true;
+                                        }
+                                    } else {
+                                        push = true;
                                     }
+                                }
+                                if push {
                                     let rx_node_id = receiver.node.borrow().info.id;
-                                    priority_queue
-                                        .push(Reverse(DistanceWrapper::new(updated_route.clone())));
-                                    tree.by_destination[rx_node_id as usize] = Some(updated_route);
 
-                                    if $is_tree_output {
-                                        if !(self.visited_as_rx_ids[rx_node_id as usize]) {
-                                            self.visited_as_rx_ids[rx_node_id as usize] = true;
-                                            self.visited_as_rx_count += 1;
+                                    if let Some(hop) = &route_proposition.via {
+                                        let route_proposition_ref =
+                                            Rc::new(RefCell::new(route_proposition.clone()));
+                                        priority_queue.push(Reverse(DistanceWrapper::new(
+                                            route_proposition_ref.clone(),
+                                        )));
+                                        let contact = &hop.contact;
+                                        contact.borrow_mut().work_area =
+                                            Some(route_proposition_ref.clone());
+                                        tree.by_destination[rx_node_id as usize] =
+                                            Some(route_proposition_ref);
+                                        altered_contacts.push(contact.clone());
+                                        if $is_tree_output {
+                                            if !(self.visited_as_rx_ids[rx_node_id as usize]) {
+                                                self.visited_as_rx_ids[rx_node_id as usize] = true;
+                                                self.visited_as_rx_count += 1;
+                                            }
                                         }
                                     }
                                 }
@@ -225,9 +210,7 @@ macro_rules! define_contact_graph {
 
                 // We replace rather than clear because some work areas became part of the output.
                 for contact in altered_contacts {
-                    let to_node = contact.borrow().get_rx_node();
-                    let new_work_area = Rc::new(RefCell::new(RouteStage::new_work_area(to_node)));
-                    RefCell::borrow_mut(&contact).work_area = new_work_area;
+                    contact.borrow_mut().work_area = None;
                 }
 
                 return tree;

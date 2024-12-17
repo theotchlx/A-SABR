@@ -136,14 +136,10 @@ macro_rules! define_node_graph {
                                     [receiver.node.borrow().info.id as usize]
                                     .clone()
                                 {
-                                    {
-                                        let mut known_route = know_route_ref.borrow_mut();
-                                        if D::cmp(&route_proposition, &known_route)
-                                            == Ordering::Less
-                                        {
-                                            known_route.is_disabled = true;
-                                            push = true;
-                                        }
+                                    let mut known_route = know_route_ref.borrow_mut();
+                                    if D::cmp(&route_proposition, &known_route) == Ordering::Less {
+                                        known_route.is_disabled = true;
+                                        push = true;
                                     }
                                 } else {
                                     push = true;

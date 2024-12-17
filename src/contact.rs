@@ -68,7 +68,7 @@ pub struct Contact<CM: ContactManager> {
     pub manager: CM,
     #[cfg(feature = "contact_work_area")]
     /// The work area for managing path construction stages (compilation option).
-    pub work_area: Rc<RefCell<RouteStage<CM>>>,
+    pub work_area: Option<Rc<RefCell<RouteStage<CM>>>>,
     #[cfg(feature = "contact_suppression")]
     /// Suppression option for path construction (compilation option).
     pub suppressed: bool,
@@ -93,7 +93,7 @@ impl<CM: ContactManager> Contact<CM> {
                 info,
                 manager,
                 #[cfg(feature = "contact_work_area")]
-                work_area: Rc::new(RefCell::new(RouteStage::new_work_area(to_node))),
+                work_area: None,
                 #[cfg(feature = "contact_suppression")]
                 suppressed: false,
             });
