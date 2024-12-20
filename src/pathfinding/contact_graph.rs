@@ -164,14 +164,18 @@ macro_rules! define_contact_graph {
                             ) {
                                 let mut push = false;
                                 if let Some(hop) = &route_proposition.via {
+                                    // todo : improve CF..
                                     if let Some(know_route_ref) = &hop.contact.borrow().work_area {
                                         let mut know_route = know_route_ref.borrow_mut();
                                         if D::cmp(&route_proposition, &know_route) == Ordering::Less
                                         {
+                                             // if "Test"
                                             know_route.is_disabled = true;
                                             push = true;
                                         }
                                     } else {
+                                        // if "None"
+                                        altered_contacts.push(hop.contact.clone());
                                         push = true;
                                     }
                                 }
@@ -187,9 +191,27 @@ macro_rules! define_contact_graph {
                                         let contact = &hop.contact;
                                         contact.borrow_mut().work_area =
                                             Some(route_proposition_ref.clone());
-                                        tree.by_destination[rx_node_id as usize] =
-                                            Some(route_proposition_ref);
-                                        altered_contacts.push(contact.clone());
+
+                                        // We can do this directly only in the if "Test" without the else
+                                        if let Some(know_route_ref) = tree.by_destination
+                                            [rx_node_id as usize]
+                                            .clone()
+                                        {
+                                            let known_best_route = know_route_ref.borrow_mut();
+                                            if D::cmp(&route_proposition, &known_best_route)
+                                                == Ordering::Less
+                                            {
+                                                tree.by_destination
+                                                    [rx_node_id as usize] =
+                                                    Some(route_proposition_ref);
+                                            }
+                                        } else {
+                                            // We can do this directly in the if "None"
+                                            tree.by_destination
+                                                [rx_node_id as usize] =
+                                                Some(route_proposition_ref);
+                                        }
+
                                         if $is_tree_output {
                                             if !(self.visited_as_rx_ids[rx_node_id as usize]) {
                                                 self.visited_as_rx_ids[rx_node_id as usize] = true;
