@@ -12,7 +12,7 @@ use crate::{
 
 use std::{cell::RefCell, marker::PhantomData, rc::Rc};
 
-use super::{schedule_multicast, schedule_unicast, RoutingOutput};
+use super::{schedule_multicast, schedule_unicast, Router, RoutingOutput};
 
 /// A structure representing the Shortest Path with Safety Nodes (SPSN) algorithm.
 ///
@@ -44,6 +44,24 @@ pub struct Spsn<NM: NodeManager, CM: ContactManager, P: Pathfinding<NM, CM>, S: 
     _phantom_cm: PhantomData<CM>,
 }
 
+impl<NM: NodeManager, CM: ContactManager, P: Pathfinding<NM, CM>, S: TreeStorage<NM, CM>> Router<CM>
+    for Spsn<NM, CM, P, S>
+{
+    fn route(
+        &mut self,
+        source: NodeID,
+        bundle: &Bundle,
+        curr_time: Date,
+        excluded_nodes: &Vec<NodeID>,
+    ) -> Option<RoutingOutput<CM>> {
+        if bundle.destinations.len() == 1 {
+            return self.route_unicast(source, bundle, curr_time, excluded_nodes);
+        }
+
+        return self.route_multicast(source, bundle, curr_time, excluded_nodes);
+    }
+}
+
 impl<S: TreeStorage<NM, CM>, NM: NodeManager, CM: ContactManager, P: Pathfinding<NM, CM>>
     Spsn<NM, CM, P, S>
 {
@@ -73,36 +91,6 @@ impl<S: TreeStorage<NM, CM>, NM: NodeManager, CM: ContactManager, P: Pathfinding
             _phantom_nm: PhantomData,
             _phantom_cm: PhantomData,
         }
-    }
-
-    /// Routes a bundle to its destination(s) using either unicast or multicast routing,
-    /// depending on the number of destinations.
-    ///
-    /// The `route` function checks the number of destinations in `bundle`. If there is only one
-    /// destination, it calls `route_unicast` to handle routing for a single target node. For multiple
-    /// destinations, it calls `route_multicast` to handle routing for multiple target nodes.
-    ///
-    /// # Parameters
-    /// - `source`: The source node ID initiating the routing operation.
-    /// - `bundle`: The `Bundle` containing destination information and other relevant routing data.
-    /// - `curr_time`: The current time, which affects scheduling and time-sensitive routing calculations.
-    /// - `excluded_nodes`: A list of nodes to exclude from the routing paths.
-    ///
-    /// # Returns
-    /// An `Option<RoutingOutput<CM>>`, where `Some(RoutingOutput)` contains the routing details if
-    /// successful, and `None` if routing fails or encounters exclusions.
-    pub fn route(
-        &mut self,
-        source: NodeID,
-        bundle: &Bundle,
-        curr_time: Date,
-        excluded_nodes: &Vec<NodeID>,
-    ) -> Option<RoutingOutput<CM>> {
-        if bundle.destinations.len() == 1 {
-            return self.route_unicast(source, bundle, curr_time, excluded_nodes);
-        }
-
-        return self.route_multicast(source, bundle, curr_time, excluded_nodes);
     }
 
     /// Routes a bundle to a single destination node using unicast routing.

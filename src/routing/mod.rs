@@ -15,6 +15,32 @@ pub mod aliases;
 pub mod cgr;
 pub mod spsn;
 
+/// A trait to allow generic initialization of routers.
+pub trait Router<CM: ContactManager> {
+    /// Routes a bundle to its destination(s) using either unicast or multicast routing,
+    /// depending on the number of destinations.
+    ///
+    /// The `route` function checks the number of destinations in `bundle`. If there is only one
+    /// destination.
+    ///
+    /// # Parameters
+    /// - `source`: The source node ID initiating the routing operation.
+    /// - `bundle`: The `Bundle` containing destination information and other relevant routing data.
+    /// - `curr_time`: The current time, which affects scheduling and time-sensitive routing calculations.
+    /// - `excluded_nodes`: A list of nodes to exclude from the routing paths.
+    ///
+    /// # Returns
+    /// An `Option<RoutingOutput<CM>>`, where `Some(RoutingOutput)` contains the routing details if
+    /// successful, and `None` if routing fails or encounters exclusions.
+    fn route(
+        &mut self,
+        source: NodeID,
+        bundle: &Bundle,
+        curr_time: Date,
+        excluded_nodes: &Vec<NodeID>,
+    ) -> Option<RoutingOutput<CM>>;
+}
+
 /// A struct that represents the output of a routing operation.
 ///
 /// The `RoutingOutput` struct is used to store the results of routing calculations,

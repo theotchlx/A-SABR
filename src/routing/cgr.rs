@@ -13,7 +13,7 @@ use crate::{
 
 use std::{cell::RefCell, marker::PhantomData, rc::Rc};
 
-use super::{dry_run_unicast_path_with_exclusions, schedule_unicast_path, RoutingOutput};
+use super::{dry_run_unicast_path_with_exclusions, schedule_unicast_path, Router, RoutingOutput};
 
 pub struct Cgr<NM: NodeManager, CM: ContactManager, P: Pathfinding<NM, CM>, S: RouteStorage<NM, CM>>
 {
@@ -25,6 +25,24 @@ pub struct Cgr<NM: NodeManager, CM: ContactManager, P: Pathfinding<NM, CM>, S: R
     _phantom_nm: PhantomData<NM>,
     #[doc(hidden)]
     _phantom_cm: PhantomData<CM>,
+}
+
+impl<NM: NodeManager, CM: ContactManager, P: Pathfinding<NM, CM>, S: RouteStorage<NM, CM>>
+    Router<CM> for Cgr<NM, CM, P, S>
+{
+    fn route(
+        &mut self,
+        source: NodeID,
+        bundle: &Bundle,
+        curr_time: Date,
+        excluded_nodes: &Vec<NodeID>,
+    ) -> Option<RoutingOutput<CM>> {
+        if bundle.destinations.len() == 1 {
+            return self.route_unicast(source, bundle, curr_time, excluded_nodes);
+        }
+
+        todo!();
+    }
 }
 
 impl<S: RouteStorage<NM, CM>, NM: NodeManager, CM: ContactManager, P: Pathfinding<NM, CM>>
@@ -42,20 +60,6 @@ impl<S: RouteStorage<NM, CM>, NM: NodeManager, CM: ContactManager, P: Pathfindin
             _phantom_nm: PhantomData,
             _phantom_cm: PhantomData,
         }
-    }
-
-    pub fn route(
-        &mut self,
-        source: NodeID,
-        bundle: &Bundle,
-        curr_time: Date,
-        excluded_nodes: &Vec<NodeID>,
-    ) -> Option<RoutingOutput<CM>> {
-        if bundle.destinations.len() == 1 {
-            return self.route_unicast(source, bundle, curr_time, excluded_nodes);
-        }
-
-        todo!();
     }
 
     fn route_unicast(
