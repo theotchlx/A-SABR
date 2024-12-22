@@ -169,7 +169,7 @@ macro_rules! define_contact_graph {
                                         let mut know_route = know_route_ref.borrow_mut();
                                         if D::cmp(&route_proposition, &know_route) == Ordering::Less
                                         {
-                                             // if "Test"
+                                            // if "Test"
                                             know_route.is_disabled = true;
                                             push = true;
                                         }
@@ -193,22 +193,19 @@ macro_rules! define_contact_graph {
                                             Some(route_proposition_ref.clone());
 
                                         // We can do this directly only in the if "Test" without the else
-                                        if let Some(know_route_ref) = tree.by_destination
-                                            [rx_node_id as usize]
-                                            .clone()
+                                        if let Some(know_route_ref) =
+                                            tree.by_destination[rx_node_id as usize].clone()
                                         {
                                             let known_best_route = know_route_ref.borrow_mut();
                                             if D::cmp(&route_proposition, &known_best_route)
                                                 == Ordering::Less
                                             {
-                                                tree.by_destination
-                                                    [rx_node_id as usize] =
+                                                tree.by_destination[rx_node_id as usize] =
                                                     Some(route_proposition_ref);
                                             }
                                         } else {
                                             // We can do this directly in the if "None"
-                                            tree.by_destination
-                                                [rx_node_id as usize] =
+                                            tree.by_destination[rx_node_id as usize] =
                                                 Some(route_proposition_ref);
                                         }
 

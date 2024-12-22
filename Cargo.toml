@@ -18,3 +18,10 @@ contact_work_area = []
 contact_suppression = []
 first_depleted = []
 enable_node_management = []
+
+[dev-dependencies]
+criterion = "0.3"
+
+[[bench]]
+name = "spsn_benchmark"
+harness = false
