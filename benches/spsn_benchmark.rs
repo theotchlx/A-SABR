@@ -7,29 +7,7 @@ use a_sabr::{
 };
 use criterion::{black_box, criterion_group, criterion_main, BatchSize, Criterion};
 
-macro_rules! make_spsn_router {
-    ($router_type:ident, $ptvg_filepath:expr) => {{
-        let (nodes, contacts) =
-            TVGUtilContactPlan::parse::<SegmentationManager>($ptvg_filepath).unwrap();
-
-        let route_storage = Rc::new(RefCell::new(TreeCache::new(false, false, 10)));
-
-        $router_type::new(nodes, contacts, route_storage, false)
-    }};
-}
-
-macro_rules! blackbox_route_bundle {
-    ($router:ident, $source:expr, $bundle:expr, $curr_time:expr, $excluded_nodes:expr) => {
-        $router.route(
-            black_box($source),
-            black_box($bundle),
-            black_box($curr_time),
-            black_box($excluded_nodes),
-        )
-    };
-}
-
-pub fn spsn_mpt_benchmark(c: &mut Criterion) {
+pub fn benchmark(c: &mut Criterion) {
     let ptvg_filepath = "benches/ptvg_files/sample1.json";
 
     let source = 178;
@@ -42,31 +20,72 @@ pub fn spsn_mpt_benchmark(c: &mut Criterion) {
     };
     let curr_time = 60.0;
     let excluded_nodes: Vec<NodeID> = vec![];
+    let spsn_opts = SpsnOptions{ check_size: false, check_priority: false, max_entries: 10 };
 
-    let mut group = c.benchmark_group("SpsnMpt");
-    group.bench_function("SABR", |b| {
-        b.iter_batched(
-            || make_spsn_router!(SpsnMpt, ptvg_filepath),
-            |mut router| {
-                blackbox_route_bundle!(router, source, &bundle, curr_time, &excluded_nodes);
-            },
-            BatchSize::SmallInput,
-        );
-    });
-    group.bench_function("Hop", |b| {
-        b.iter_batched(
-            || make_spsn_router!(SpsnHopMpt, ptvg_filepath),
-            |mut router| {
-                blackbox_route_bundle!(router, source, &bundle, curr_time, &excluded_nodes);
-            },
-            BatchSize::SmallInput,
-        );
-    });
+    let mut router_types = vec![
+        "SpsnMpt",
+        "SpsnNodeGraph",
+        "SpsnHopMpt",
+        "SpsnHopNodeGraph",
+    ];
+
+    #[cfg(feature = "contact_work_area")]
+    router_types.extend(["SpsnContactGraph", "SpsnHopContactGraph"]);
+
+    #[cfg(feature = "contact_suppression")]
+    router_types.extend(["CgrFirstEndingMpt", "CgrHopFirstEndingNodeGraph"]);
+
+    #[cfg(all(feature = "contact_suppression", feature = "first_depleted"))]
+    router_types.extend([
+        "CgrFirstDepletedMpt",
+        "CgrFirstDepletedNodeGraph",
+        "CgrHopFirstDepletedMpt",
+        "CgrHopFirstDepletedNodeGraph",
+    ]);
+
+    #[cfg(all(feature = "contact_work_area", feature = "contact_suppression"))]
+    router_types.extend([
+        "CgrFirstEndingContactGraph",
+        "CgrHopFirstEndingContactGraph",
+    ]);
+    #[cfg(all(
+        feature = "contact_work_area",
+        feature = "contact_suppression",
+        feature = "first_depleted"
+    ))]
+    router_types.extend([
+        "CgrFirstDepletedContactGraph",
+        "CgrHopFirstDepletedContactGraph",
+    ]);
+
+    let mut group = c.benchmark_group("Routers");
+
+    for router_type in router_types {
+        group.bench_function(router_type, |b| {
+            b.iter_batched(
+                || {
+                    let (nodes, contacts) =
+                        TVGUtilContactPlan::parse::<SegmentationManager>(ptvg_filepath).unwrap();
+
+                    build_generic_router(router_type, nodes, contacts, Some(spsn_opts.clone()))
+                },
+                |mut router| {
+                    black_box(router.route(
+                        black_box(source),
+                        black_box(&bundle),
+                        black_box(curr_time),
+                        black_box(&excluded_nodes),
+                    ));
+                },
+                BatchSize::SmallInput,
+            );
+        });
+    }
 }
 
 criterion_group! {
     name=benches;
     config=Criterion::default().sample_size(50);
-    targets=spsn_mpt_benchmark
+    targets=benchmark
 }
 criterion_main!(benches);

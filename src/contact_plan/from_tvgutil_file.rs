@@ -129,13 +129,7 @@ impl TVGUtilContactPlan {
                     data_rate,
                     confidence,
                 };
-                #[cfg(feature = "debug")]
-                println!(
-                    "{:#?} {:#?} {:#?}",
-                    pair[0].as_str(),
-                    pair[1].as_str(),
-                    &tvgcontact
-                );
+
                 let contact = CM::tvg_convert(tvgcontact).unwrap();
 
                 contacts.push(contact);

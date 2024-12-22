@@ -90,7 +90,6 @@ pub type CgrHopFirstEndingContactGraph<NM, CM> =
     feature = "contact_suppression",
     feature = "first_depleted"
 ))]
-
 pub type CgrHopFirstDepletedContactGraph<NM, CM> =
     Cgr<NM, CM, FirstDepleted<NM, CM, ContactGraphPath<NM, CM, Hop>>, RoutingTable<NM, CM, Hop>>;
 
@@ -122,11 +121,11 @@ macro_rules! register_spsn_router {
         }
     };
 }
-
+#[derive(Clone)]
 pub struct SpsnOptions {
-    check_size: bool,
-    check_priority: bool,
-    max_entries: usize,
+    pub check_size: bool,
+    pub check_priority: bool,
+    pub max_entries: usize,
 }
 
 pub fn build_generic_router<NM: NodeManager + 'static, CM: ContactManager + 'static>(
