@@ -165,6 +165,8 @@ fn try_make_hop<NM: NodeManager, CM: ContactManager>(
         arrival: Date::MAX,
     };
 
+    #[cfg(feature = "bundle_processing")]
+    let mut mut_bundle = sndr_route.borrow().bundle_opt.clone();
     let sndr_route_borrowed = sndr_route.borrow();
 
     for (idx, contact) in contacts.iter().enumerate().skip(first_contact_index) {
@@ -179,12 +181,12 @@ fn try_make_hop<NM: NodeManager, CM: ContactManager>(
             break;
         }
 
-        #[cfg(feature = "enable_node_management")]
+        #[cfg(feature = "bundle_processing")]
         let sending_time = tx_node
             .borrow()
             .manager
-            .dry_run_process(sndr_route_borrowed.at_time, bundle);
-        #[cfg(not(feature = "enable_node_management"))]
+            .dry_run_process(sndr_route_borrowed.at_time, &mut mut_bundle);
+        #[cfg(not(feature = "bundle_processing"))]
         let sending_time = sndr_route_borrowed.at_time;
 
         if let Some(hop) =
@@ -226,6 +228,8 @@ fn try_make_hop<NM: NodeManager, CM: ContactManager>(
                 contact: seleted_contact.clone(),
                 parent_route: sndr_route.clone(),
             }),
+            #[cfg(feature = "bundle_processing")]
+            mut_bundle,
         );
 
         route_proposition.hop_count = sndr_route_borrowed.hop_count + 1;
