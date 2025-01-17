@@ -3,7 +3,7 @@
 
 ## Description
 
-Current version is a beta release (contact olivier.de-jonckere@lirmm.fr for more information). See source documentation [here](https://maore-dtn.lirmm.net/a-sabr/a_sabr).
+Current version is a beta release (contact olivier.de-jonckere@lirmm.fr for more information). See source documentation [here](https://dtn-mtp.github.io/A-SABR/).
 
 The A-SABR project provides a framework to instantiate routing algorithms from research activities up to operational contexts. This project was developed after the experience gathered from CGR at the Jet Propulsion Laboratory and the scalability researches around Schedule-Aware Bundle Routing (SABR)'s scalability with SPSN at the University of Dresden.
 
