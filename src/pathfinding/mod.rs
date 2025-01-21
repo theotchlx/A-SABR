@@ -165,8 +165,12 @@ fn try_make_hop<NM: NodeManager, CM: ContactManager>(
         arrival: Date::MAX,
     };
 
+    // If bundle processing is enabled, a mutable bundle copy is required to be attached to the RouteStage.
     #[cfg(feature = "bundle_processing")]
-    let mut mut_bundle = sndr_route.borrow().bundle_opt.clone();
+    let mut bundle_to_consider = sndr_route.borrow().bundle_opt.clone();
+    #[cfg(not(feature = "bundle_processing"))]
+    let bundle_to_consider = bundle;
+
     let sndr_route_borrowed = sndr_route.borrow();
 
     for (idx, contact) in contacts.iter().enumerate().skip(first_contact_index) {
@@ -185,20 +189,20 @@ fn try_make_hop<NM: NodeManager, CM: ContactManager>(
         let sending_time = tx_node
             .borrow()
             .manager
-            .dry_run_process(sndr_route_borrowed.at_time, &mut mut_bundle);
+            .dry_run_process(sndr_route_borrowed.at_time, &mut bundle_to_consider);
         #[cfg(not(feature = "bundle_processing"))]
         let sending_time = sndr_route_borrowed.at_time;
 
-        if let Some(hop) =
-            contact_borrowed
-                .manager
-                .dry_run(&contact_borrowed.info, sending_time, bundle)
-        {
+        if let Some(hop) = contact_borrowed.manager.dry_run(
+            &contact_borrowed.info,
+            sending_time,
+            &bundle_to_consider,
+        ) {
             #[cfg(feature = "enable_node_management")]
             if !tx_node
                 .borrow()
                 .manager
-                .dry_run_tx(hop.tx_start, hop.tx_end, bundle)
+                .dry_run_tx(hop.tx_start, hop.tx_end, &bundle_to_consider)
             {
                 continue;
             }
@@ -229,7 +233,7 @@ fn try_make_hop<NM: NodeManager, CM: ContactManager>(
                 parent_route: sndr_route.clone(),
             }),
             #[cfg(feature = "bundle_processing")]
-            mut_bundle,
+            bundle_to_consider,
         );
 
         route_proposition.hop_count = sndr_route_borrowed.hop_count + 1;

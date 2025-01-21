@@ -163,8 +163,11 @@ impl<CM: ContactManager> RouteStage<CM> {
             let mut contact_borrowed = via.contact.borrow_mut();
             let info = contact_borrowed.info;
 
+            // If bundle processing is enabled, a mutable bundle copy is required to be attached to the RouteStage.
             #[cfg(feature = "bundle_processing")]
-            let mut mut_bundle = bundle.clone();
+            let mut bundle_to_consider = bundle.clone();
+            #[cfg(not(feature = "bundle_processing"))]
+            let bundle_to_consider = bundle;
 
             #[cfg(feature = "enable_node_management")]
             let mut tx_node = node_list[contact_borrowed.get_tx_node() as usize].borrow_mut();
@@ -172,32 +175,35 @@ impl<CM: ContactManager> RouteStage<CM> {
             let mut rx_node = node_list[contact_borrowed.get_rx_node() as usize].borrow_mut();
 
             #[cfg(feature = "bundle_processing")]
-            let sending_time = tx_node.manager.schedule_process(at_time, &mut mut_bundle);
+            let sending_time = tx_node
+                .manager
+                .schedule_process(at_time, &mut bundle_to_consider);
             #[cfg(not(feature = "bundle_processing"))]
             let sending_time = at_time;
 
-            if let Some(res) = contact_borrowed
-                .manager
-                .schedule(&info, sending_time, bundle)
+            if let Some(res) =
+                contact_borrowed
+                    .manager
+                    .schedule(&info, sending_time, &bundle_to_consider)
             {
                 #[cfg(feature = "enable_node_management")]
                 if !tx_node
                     .manager
-                    .schedule_tx(res.tx_start, res.tx_end, bundle)
+                    .schedule_tx(res.tx_start, res.tx_end, &bundle_to_consider)
                 {
                     return false;
                 }
 
                 let arrival_time = res.tx_end + res.delay;
 
-                if arrival_time > bundle.expiration {
+                if arrival_time > bundle_to_consider.expiration {
                     return false;
                 }
                 #[cfg(feature = "enable_node_management")]
                 if !rx_node.manager.schedule_rx(
                     res.tx_start + res.delay,
                     res.tx_end + res.delay,
-                    bundle,
+                    &bundle_to_consider,
                 ) {
                     return false;
                 }
@@ -205,7 +211,7 @@ impl<CM: ContactManager> RouteStage<CM> {
                 self.at_time = arrival_time;
                 #[cfg(feature = "bundle_processing")]
                 {
-                    self.bundle_opt = mut_bundle;
+                    self.bundle_opt = bundle_to_consider;
                 }
                 return true;
             }
@@ -240,7 +246,7 @@ impl<CM: ContactManager> RouteStage<CM> {
         with_exclusions: bool,
     ) -> bool {
         if let Some(via) = &self.via {
-            let mut contact_borrowed = via.contact.borrow_mut();
+            let contact_borrowed = via.contact.borrow_mut();
             let info = contact_borrowed.info;
 
             if with_exclusions {
@@ -252,8 +258,11 @@ impl<CM: ContactManager> RouteStage<CM> {
                 }
             }
 
+            // If bundle processing is enabled, a mutable bundle copy is required to be attached to the RouteStage.
             #[cfg(feature = "bundle_processing")]
-            let mut mut_bundle = bundle.clone();
+            let mut bundle_to_consider = bundle.clone();
+            #[cfg(not(feature = "bundle_processing"))]
+            let bundle_to_consider = bundle;
 
             #[cfg(feature = "enable_node_management")]
             let mut tx_node = node_list[contact_borrowed.get_tx_node() as usize].borrow_mut();
@@ -261,29 +270,36 @@ impl<CM: ContactManager> RouteStage<CM> {
             let mut rx_node = node_list[contact_borrowed.get_rx_node() as usize].borrow_mut();
 
             #[cfg(feature = "bundle_processing")]
-            let sending_time = tx_node.manager.dry_run_process(at_time, &mut mut_bundle);
+            let sending_time = tx_node
+                .manager
+                .dry_run_process(at_time, &mut bundle_to_consider);
+
             #[cfg(not(feature = "bundle_processing"))]
             let sending_time = at_time;
 
-            if let Some(res) = contact_borrowed
-                .manager
-                .dry_run(&info, sending_time, bundle)
+            if let Some(res) =
+                contact_borrowed
+                    .manager
+                    .dry_run(&info, sending_time, &bundle_to_consider)
             {
                 #[cfg(feature = "enable_node_management")]
-                if !tx_node.manager.dry_run_tx(res.tx_start, res.tx_end, bundle) {
+                if !tx_node
+                    .manager
+                    .dry_run_tx(res.tx_start, res.tx_end, &bundle_to_consider)
+                {
                     return false;
                 }
 
                 let arrival_time = res.tx_end + res.delay;
 
-                if arrival_time > bundle.expiration {
+                if arrival_time > bundle_to_consider.expiration {
                     return false;
                 }
                 #[cfg(feature = "enable_node_management")]
                 if !rx_node.manager.dry_run_rx(
                     res.tx_start + res.delay,
                     res.tx_end + res.delay,
-                    bundle,
+                    &bundle_to_consider,
                 ) {
                     return false;
                 }
@@ -291,7 +307,7 @@ impl<CM: ContactManager> RouteStage<CM> {
                 self.at_time = arrival_time;
                 #[cfg(feature = "bundle_processing")]
                 {
-                    self.bundle_opt = mut_bundle;
+                    self.bundle_opt = bundle_to_consider;
                 }
                 return true;
             }
