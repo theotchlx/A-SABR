@@ -8,6 +8,28 @@ use crate::parsing::{Lexer, ParsingState};
 /// Represents the unique inner identifier for a node.
 pub type NodeID = u16;
 
+/// Represents a NodeID element of a virtual node's list of NodeIDs.
+pub enum VirtualNodeElement {
+    NodeID(NodeID),
+    /// The End variant signifies the end of the virtual node's NodeID list.
+    End,
+}
+
+impl FromStr for VirtualNodeElement {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s == "End" {
+            Ok(VirtualNodeElement::End)
+        } else {
+            let id = s
+                .parse::<NodeID>()
+                .map_err(|e| format!("Error while parsing NodeID: {}", e))?;
+            Ok(VirtualNodeElement::NodeID(id))
+        }
+    }
+}
+
 /// Represents the name of a node.
 pub type NodeName = String;
 
